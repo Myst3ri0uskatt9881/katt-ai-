@@ -1,0 +1,63 @@
+import OpenAI from "openai";
+import readline from "readline";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+// Validate API key
+if (!process.env.OPENAI_API_KEY) {
+    console.error("❌ Missing OPENAI_API_KEY in .env file");
+    process.exit(1);
+}
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
+// Create readline interface for CLI chat
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+// Store conversation history
+const conversation = [
+    { role: "system", content: "You are a helpful AI assistant." }
+];
+
+// Function to get AI response
+async function getAIResponse(userInput) {
+    try {
+        conversation.push({ role: "user", content: userInput });
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo", // or "gpt-4" if available
+            messages: conversation,
+            temperature: 0.7
+        });
+
+        const aiMessage = response.choices[0].message.content.trim();
+        conversation.push({ role: "assistant", content: aiMessage });
+
+        console.log(`\n🤖 AI: ${aiMessage}\n`);
+    } catch (error) {
+        console.error("❌ Error fetching AI response:", error.message);
+    }
+}
+
+// Main chat loop
+function startChat() {
+    rl.question("You: ", async (input) => {
+        if (input.toLowerCase() === "exit") {
+            console.log("👋 Chat ended.");
+            rl.close();
+            return;
+        }
+        await getAIResponse(input);
+        startChat();
+    });
+}
+
+console.log("💬 AI Chatbot started! Type 'exit' to quit.\n");
+startChat();
